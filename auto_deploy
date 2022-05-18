@@ -1,0 +1,258 @@
+#!/bin/bash
+#set +x
+declare -r intro_info="Starting automated Performance Audit...[v1.0] %(%Y-%m-%d %H:%M:%S)T\n $(date +%s)"
+declare -r wlc_text="||*************Launching Configuration*************||"
+declare -a details_arr
+declare -A full_details
+declare -i inst_nos
+#declare array to hold instance details: 
+declare -r custom_host_file="custom_deployment_hosts"
+declare -r custom_dns_file="custom_dns_file"
+declare -r inv_group_name="dbservers"
+#echo "enter username";  read uname
+#read -p "which program?" prog 
+read -s -p "Enter Password: " password
+echo
+echo "====================================================="
+echo $wlc_text
+echo "====================================================="
+echo $intro_info
+
+#echo -e "Makes a DingSound\a"
+while getopts u:p: option; do
+	case $option in 
+		u) mariadb_user=$OPTARG;;
+		p) mariadb_password=$OPTARG;;
+		?) echo "unknown flag"
+	esac
+done
+#echo "user: $mariadb_user / password: $mariadb_password"
+printTableformat(){
+    local -r delimiter="${1}"
+    local -r data="$(removeEmptyLines "${2}")"
+
+    if [[ "${delimiter}" != '' && "$(isEmptyString "${data}")" = 'false' ]]
+    	then 
+	    local -r numberOfLines="$(wc -l <<< "${data}")"
+            if [[ "${numberOfLines}" -gt '0' ]]
+	    then
+		local table=''
+		local i=1
+
+		for ((i=1; i <= "${numberOfLines}"; i++))
+		do
+		  local line=''
+                  line="$(sed "${i}q;d" <<< "${data}")"
+
+		  local numberOfColumns='0'
+		  numberOfColumns="$(awk -F "${delimiter}" '{print NF}' <<< "${line}")"
+		  
+		  #Add Line Delimiter
+		  if [[ "${i}" -eq '1' ]]; then
+		      table="${table}$(printf '%s#+' "$(repeatString '#+' "${numberOfColumns}")")"
+		  fi
+		  #Add Header or Body
+		  table="${table}\n"
+		  local j=1
+		  for((j = 1; j <= "${numberOfColumns}"; j = j+1 ))
+		  do
+                     table="${table}$(printf '#| %s' "$(cut -d "${delimiter}" -f "${j}" <<< "${line}")")"
+		  done
+                  table="${table}#|\n"
+	          #Add line Delimiter
+		  if [[ "${i}" -eq '1' ]] || [[ "${numberOfLines}" -gt '1' && "${i}" -eq "${numberOfLines}" ]]
+		  then
+			table="${table}$(printf '%s#+' "$(repeatString '#+' "${numberOfColumns}")")"
+		  fi
+		done
+                if [[ "$(isEmptyString "${table}")" = 'false' ]]
+ 		then
+       		    echo -e "${table}" | column -s '#' -t | awk '/^\+/{gsub(" ","-", $0)}1'
+                fi
+            fi
+    fi
+}
+
+function removeEmptyLines(){
+   local -r  content="${1}"
+
+   echo -e "${content}" | sed '/^\s*$/d'
+}
+
+function repeatString(){
+  local -r string="${1}"
+  local -r numberToRepeat="${2}"
+  
+  if [[ "${string}" != '' && "${numberToRepeat}" =~ ^[1-9][0-9]*$ ]]
+  then
+      local -r result="$(printf "%${numberToRepeat}s")"
+      echo -e "${result// /${string}}"
+  fi
+}
+
+function isEmptyString(){
+   local -r string="${1}"
+   if [[ "$(trimString "${string}")" = '' ]]
+   then
+       echo 'true' && return 0
+   fi
+
+   echo 'false' && return 1
+}
+
+function trimString(){
+  local -r string="${1}"
+  sed 's,^[[:blank:]]*,,' <<< "${string}" | sed 's,[[:blank:]]*$,,'
+}
+
+touch server_details
+cat > server_details <<-EOF
+S/N,ALIAS,HOST,SSH_USER,SSH_PASSWORD
+EOF
+touch $custom_host_file
+#write custom host deployment header
+cat > $custom_host_file <<-EOF
+[$inv_group_name]
+EOF
+
+begin_report(){
+  echo "Starting task..."
+  #todo: put logic to enter dynamic hosts or read from file
+  read -p "Enter Number of Nodes:" no_instances
+if [[ $no_instances -gt 0 ]]; then 
+   #echo $?
+   #call next program
+   for ((i=1; i<=$no_instances; i++))
+   do
+	echo
+	echo "configure instance: $i"
+	#instance_details[alias]
+	read -p "alias($i): " alias
+	read -p "host($i):  " host
+	read -p "ssh_user:  " ssh_user
+#put logic to use ssh trust/pub_key or enter password
+	unset ssh_password
+        unset charcount        
+        unset inst_no 
+        inst_no=$i
+	charcount=0
+	prompt="ssh_password: "
+	while IFS= read -s -r -n 1 -p "$prompt" ssh_pwd
+	do
+		#take and mask password with * characters
+		if [[ $ssh_pwd == $'\0' ]]
+		then
+		   break
+		fi
+		#handle Backspaces
+		if [[ $ssh_pwd == $'\177' ]]; then
+		    if [[ $charcount -gt 0 ]]; then
+                        charcount=$((charcount-1))
+       			prompt=$'\b \b'
+		        ssh_password="${ssh_password%?}"
+                    else
+			prompt=''
+                    fi
+		else
+		    charcount=$((charcount+1))
+	            prompt='*'
+		    ssh_password+="$ssh_pwd"
+		fi
+	done
+declare redacted_pwd=${ssh_password//[a-z0-9]/x}
+#line should execute only if using dynamic hosts
+cat >> server_details <<-EOF
+$inst_no,$alias,$host,$ssh_user,$redacted_pwd
+EOF
+#write custom host deployment
+cat >> $custom_host_file <<-EOF
+$alias ansible_ssh_host=$host ansible_connection=ssh ansible_user=$ssh_user ansible_password=$ssh_password
+EOF
+#write hostname to /etc/hosts
+cat >> $custom_dns_file <<-EOF
+$host  $alias
+EOF
+	#full_details+=([alias]=$alias [host]=$host [ssh_user]=$ssh_user [ssh_password]=$ssh_password)
+   done
+echo
+   printTableformat ',' "$(cat server_details)"
+   echo
+   read -p "Proceed with running reports on the above servers[Y/N]: "  conf_pr
+   if [[ $conf_pr = "y" || $conf_pr = "yes" ]]; then
+   	echo "Auto Deploying Script."; launchAnsible
+   elif [[ $conf_pr = "n" || $conf_pr = "no" ]]; then
+   echo "Terminating Program... Bye..."
+   fi
+#**********
+else
+   echo "[Error] : Please enter a Number greater than 0"
+fi
+}
+
+start_deployment(){
+  echo "[NOTE]: [----------------------starting deployment----------------------]"
+  echo "[NOTE]: Initial checks passed. Proceeding to deploy on configured nodes"
+  echo "[NOTE]: Ensure configured hosts are properly captured in Playbook."
+  ansible-playbook dbdeploy_bk.yml -i $custom_host_file 
+}
+
+check_OS(){
+printf "\033[0;33mDetecting Server Architectures\033[33;5m......\033[0m\n"
+oscheck_status=$(sshpass -p $ssh_password ssh -o ConnectTimeout=5 $ssh_user@$host 'bash -s' < $(dirname "$0")/check_distro.sh)
+ansible-playbook check_os.yml -i $custom_host_file
+write_custom_resolv
+check_existingDB
+}
+
+write_custom_resolv(){
+ printf "\033[0;33mWriting hostnames to /etc/resolve.conf...\033[33;5m......\033[0m\n"
+ ansible-playbook write_res_conf.yml -i $custom_host_file
+}
+
+check_existingDB(){
+echo -e "Checking DB"
+ansible-playbook check_os.yml -i $custom_host_file
+#sshpass -p $ssh_password ssh -o ConnectTimeout=5 $ssh_user@$host 'bash -s' < $(dirname "$0")/check_existing_db_service.sh
+start_deployment
+}
+
+launchAnsible(){
+echo "$inst_nos"
+#test ping on servers
+echo "Initiating Ping check..."
+ansible $inv_group_name -i $custom_host_file -m ping
+ping_status=$(ansible $inv_group_name -i $custom_host_file -m ping)
+check_string="SUCCESS"
+#if [[ $ping_status =~ "check_string" ]]; then
+# echo -e "\033[0;32mPing check status: successful[exit code: 0]\033[0m"
+#else
+#  echo -e "\033[0;33mPing check status: unsuccessful[exit code: 1]\033[0m"
+#fi
+echo "**************************************************************"
+echo "Initiating SSH checks to target nodes..."
+ssh_status=$(sshpass -p $ssh_password ssh -o ConnectTimeout=5 $ssh_user@$host echo ok 2>&1)
+echo $ssh_status
+if [[ $ssh_status == ok ]]; then
+  echo -e "\033[0;32mssh check: passed\033[0m"; check_OS
+else
+  echo -e "\033[0;31m[Error]: ssh check: failed. Reconfirm ssh credentials or configure ssh trust\033[0m".
+  echo -e  "\033[0;33mTerminating program. Fix the reported error(s) and relaunch.\033[0m"
+fi
+}
+
+echo "Select one of the tasks below to proceed: "
+echo "-------------------------------------------------"
+
+select task in  "INSTALL" "UPGRADE" "RESTORE" "BACKUP" "quit"
+do
+	case $task in 
+		INSTALL) echo "Selected task: INSTALL"; begin_report;;
+		UPGRADE) echo "Selected task: UPGRADE"; begin_report;;
+		RESTORE) echo "Selected task: RESTORE"; begin_report;;
+		BACKUP) echo "Selected task: BACKUP"; begin_report;;
+                quit) break;;
+		*) echo "Invalid option";;
+	esac
+	break
+done
+

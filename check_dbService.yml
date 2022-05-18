@@ -1,0 +1,20 @@
+---
+- name: MariaDB database
+  hosts: dbservers
+  remote_user: root
+  become: true
+  become_user: root
+  gather_facts: false
+  tasks:
+    - name: Check_Existing_DB_Service
+      script: ./check_existing_db_service.sh
+      register: db_service_check
+      no_log: True
+      tags: 
+        - check_db_service
+    - name: Display_DB_Service_Status
+      debug: 
+        msg: "{{ db_service_check.stdout[0:2] }}"
+      tags:
+        - report_status
+

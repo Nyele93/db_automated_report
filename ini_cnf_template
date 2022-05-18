@@ -1,0 +1,19 @@
+[mysqld]
+datadir=/var/lib/mysql
+log-error=/var/log/mariadb.log
+#pid-file=/var/run/mysqld/mariad.pid
+symbolic-links=0
+bind-address=0.0.0.0
+server-id={{ mysql_server_id.stdout }}
+port = 3306
+open_files_limit= 65536
+log-bin=mariadb-bin
+sync_binlog=1
+max_allowed_packet=52m
+innodb_flush_log_at_trx_commit=1
+innodb_flush_method=O_DIRECT
+binlog_format=mixed
+innodb_buffer_pool_size=1G
+
+gtid_strict_mode=1
+slave-parallel-threads=4

@@ -1,0 +1,19 @@
+---
+- name: dynamically add hosts to in-memory inventory
+  hosts: dbservers
+  gather_facts: false
+  tasks: 
+    - include_vars: host_vars.yml
+
+    - name: show variables
+      add_host:
+        hostname: "{{ item }}"
+        groups: dbservers
+      with_items: '{{ hosts }}'
+
+    - ping:
+               
+    - name: check entry
+      debug:
+          msg: "Adding host to Inventory: {{ item }} "
+      with_items: "{{ hosts }}"

@@ -1,0 +1,123 @@
+---
+- name: MariaDB database
+  hosts: dbservers
+  remote_user: root
+  become: true
+  become_user: root
+  gather_facts: true
+  tasks:
+    - name: refresh yum repo
+      command: yum clean all
+    - name: Create MariaDB repo
+      copy: 
+           src: mariadb.repo
+           dest: /etc/yum.repos.d/mariadb.repo
+    - name: install mariadb
+      yum:
+          name: 
+            - mariadb-server
+            - python3-PyMySQL
+          enablerepo: mariadb-repo
+          state: latest
+          update_cache: yes
+    - name: Start mariadb service
+      service:
+              name: mariadb
+              enabled: true
+              state: started
+    - name: Is root password set?
+      command: mysql -u root --execute "SELECT NOW()"
+      register: is_root_password_set
+      ignore_errors: no
+    - name: Change the authentication plugin
+      shell: mysql -u root -e 'UPDATE mysql.user SET plugin="mysql_native_password" WHERE user="root" AND host="localhost"'
+    - name: Flush Privileges
+      shell: mysql -u root -e 'FLUSH PRIVILEGES'
+    - name: mysql_root_password
+      mysql_user: 
+        login_user: 'root'
+        login_password: ''
+        #login_host: '192.168.1.14'
+        check_implicit_admin: true
+        host: 'localhost'
+        name: 'root'
+        password: 'Icui4cu1993'
+        state: present
+        priv: "*.*:ALL,GRANT"
+        update_password: always
+        #login_unix_socket: /var/run/mysqld/mysqld.sock
+      #when: is_root_password_set.rc == 0
+      tags:
+        - users
+    - name: create_DBA_user
+      mysql_user:
+        name: dba_admin
+        password: Password10$
+        priv: '*.*:ALL,GRANT'
+        state: present
+        host: dbservers
+    - name: Create replication account
+      mysql_user:
+                 login_user=root
+                 login_password= "{{ mysql_root_password }}"
+                 name=repl 
+                 host="%" 
+                 password=s3cretPwd 
+                 priv="*.*:REPLICATION SLAVE"
+                 state=present
+    - name: Create readwrite user
+      mysql_user:
+                 login_user=root
+                 login_password="{{ mysql_root_password }}"
+                 name=rwuser
+                 host="%"
+                 password=s3cretPwd1
+                 priv=*.*:SELECT,INSERT,UPDATE,DELETE,CREATE,DROP
+                 state=present
+    #- name: Modify Configuration file to listen on all interfaces
+    #  lineinfile: dest=/etc/my.cnf.d/mariadb-server.cnf regexp="^bind-address" line="bind-address=0.0.0.0"
+- hosts: 10.0.2.15
+  remote_user: root
+  become: true
+  gather_facts: true
+  vars:
+    mysql_root_password: "Password1"
+  tasks:
+    - name: create ini.cnf file
+      copy: 
+        dest: "/etc/my.cnf"
+        force: no
+        content: |
+          [server]
+          server_id=1
+          [mysqld]
+          log_bin=/var/log/mysql/log-bin
+    #- name: modify config file
+      #lineinfile: dest=/etc/my.cnf insertafter="^[mysqld]" line="server_id=100"
+    #- name: mod config
+      #lineinfile: dest=/etc/my.cnf.d/mariadb-server.cnf insertafter="^[mysqld]" line="log-bin=/var/log/mysql/mysql-bin-log"
+    #- name: start mariadb service
+      #service:
+              #name: mariadb
+              #enabled: true
+              #state: restarted
+    #- name: Reset master binlog
+      #command: /usr/bin/mysql -u root -p"{{mysql_root_password}}" -e "RESET MASTER"
+#- hosts: 192.168.1.15
+  #remote_user: root
+  #become: true
+  #vars:
+    #mysql_root_password: "Password1"
+  #tasks:
+    #- name: make the changes to configure file
+      #lineinfile: dest=/etc/my.cnf.d/mariadb-server.cnf insertafter="^[mysqld]" line="server-id=2"
+    #- name: mod config
+      #lineinfile: dest=/etc/my.cnf.d/mariadb-server.cnf insertafter="^[mysqld]" line="log_bin=/var/log/mysql/mysql-bin-log"
+    #- name: start mariadb service
+      #service:
+              #name: mariadb
+              #enabled: true
+              #state: restarted
+    #- name: Setup Replication
+      #command: /usr/bin/mysql -u root -p"{{mysql_root_password}}" -e "CHANGE MASTER TO master_host='10.0.2.15', master_user='repl', master_password='s3cretwdP', master_use_gtid=current_pos"
+

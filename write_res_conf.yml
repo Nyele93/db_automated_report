@@ -1,0 +1,15 @@
+---
+- name: MariaDB database
+  hosts: dbservers
+  remote_user: root
+  become: true
+  become_user: root
+  gather_facts: true
+  vars:
+    resolv_line: "{{ lookup('file','custom_dns_file') }}" 
+  tasks:
+    - name: Write hostnames to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ resolv_line }}"
+

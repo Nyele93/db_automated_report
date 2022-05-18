@@ -1,0 +1,7 @@
+[mariadb]
+name=MariaDB
+baseurl=https://mirror.djvg.sg/mariadb/yum/10.5/centos8-amd64
+module_hotfixes=1
+gpgkey=https://mirror.djvg.sg/mariadb/yum/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+
