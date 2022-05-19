@@ -153,9 +153,8 @@ if [[ $no_instances -gt 0 ]]; then
                     ssh_password+="$ssh_pwd"
                 fi
         done
-  echo "$host"
 
-  hosts_array[$((i-1))]="$host"
+     hosts_array[$((i-1))]="$host"
 declare redacted_pwd=${ssh_password//[a-z0-9]/x}
 #line should execute only if using dynamic hosts
 cat >> server_details <<-EOF
@@ -163,7 +162,11 @@ $inst_no,$alias,$host,$ssh_user,$redacted_pwd
 EOF
   done
 echo
-echo ${hosts_array[@]:0:$i} | sed -e "s/ /,/g"
+hff=`echo ${hosts_array[@]:0:$i} | sed -e "s/ /,/g"`
+cat >> host_vars.yml <<-EOF
+hosts: [$hff]
+EOF
+
    printTableformat ',' "$(cat server_details)"
    echo
    read -p "Proceed with running reports on the above servers[Y/N]: "  conf_pr
