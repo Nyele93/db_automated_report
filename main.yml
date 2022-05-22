@@ -2,7 +2,13 @@
 - name: start main tasks
   hosts: dbservers
   gather_facts: true
-  tasks: 
-    - name: echo hostname
-      debug: 
-        msg: "{{ ansible_hostname }}"
+  become: true
+  strategy: free
+  roles:
+    - performance_audit
+
+#- name: Tomcat deployment playbook
+  #hosts: 192.168.1.5
+  #remote_user: ubuntu
+  #roles:
+    #- tomcat

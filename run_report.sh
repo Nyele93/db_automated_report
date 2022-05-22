@@ -1,16 +1,14 @@
 #!/bin/bash
-#set +x
+#ToDO: fill on meta data info
 declare -r intro_info="Starting automated Performance Audit(v1.0) $(date +'%d/%m/%Y %H:%M:%S')"
 declare -a details_arr
 declare -A full_details
 declare -i inst_nos
-#declare array to hold instance details: 
+#declare array to hold instance details
 declare hosts_array=()
 declare -r custom_host_file="custom_deployment_hosts"
 declare -r custom_dns_file="custom_dns_file"
 declare -r inv_group_name="dbservers"
-#echo "enter username";  read uname
-#read -p "which program?" prog 
 read -p "Enter Customer Name: " cust_name
 echo
 echo $intro_info
@@ -130,7 +128,7 @@ then
     mkdir -p $report_directory
    chmod -R 777 $report_directory
 fi
-#replcae report dir on roles vars with creatd directory
+#replace report_dir on roles `vars` with created directory
 sed -i "s|/tmp|$report_directory|g" ./performance_audit/vars/main.yml
 
 read -p "Enter Number of Nodes:" no_instances

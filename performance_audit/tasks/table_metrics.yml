@@ -1,0 +1,30 @@
+---
+- name: Check table open size
+  command: "mysql -BNe 'select @@table_open_cache;'"
+  register: table_open_cache
+  tags: check_table_open_size
+
+- name: Check tables opened
+  command: "mysql -BNe 'select variable_value from information_schema.global_status where variable_name = \"opened_tables\";'"
+  register: tables_opened
+  tags: check_tables_opened
+
+- name: Check table definition cache size
+  command: "mysql -BNe 'select @@table_definition_cache;'"
+  register: table_defn_cache
+  tags: check_table_definition_cache
+    
+- name: check open table definitions
+  command: "mysql -BNe 'select variable_value from information_schema.global_status where variable_name = \"Opened_table_definitions\";'"
+  register: open_table_definitions
+  tags: check_open_table_definition
+
+    - name: check max tmp table size
+      command: "mysql -BNe 'select convert(@@tmp_table_size /1024 /1024, INTEGER);'"
+      register: max_tmp_table_size
+      tags: check_max_tmp_table_size
+    
+    - name: check max memory table size
+      command: "mysql -BNe 'select convert(@@max_heap_table_size /1024 /1024, INTEGER)';"
+      register: max_memory_table_size
+      tags: check_max_memory_table_size

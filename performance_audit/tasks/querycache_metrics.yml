@@ -1,0 +1,12 @@
+---
+- name: Check query cache is enabled
+  command: "mysql -BNe 'select @@query_cache_type;'"
+  register: query_cache_enabled
+  tags: check_query_cache_enabled
+
+- name: check query cache size
+  command: "mysql -BNe 'select convert(@@query_cache_size /1024 /1024, INTEGER);'"
+  register: query_cache_size
+  tags: check_query_cache_size
+
+

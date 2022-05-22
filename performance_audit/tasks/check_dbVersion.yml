@@ -1,0 +1,36 @@
+---
+- name: Check_Existing_DB_Service
+  script: ./check_existing_db_service.sh
+  register: db_service_check
+  no_log: True
+  tags: check_db_service
+
+- name: Display_DB_Service_Status
+  debug: 
+    msg: "{{ db_service_check.stdout }}"
+  when: db_service_check.stdout | length > 0
+  tags: report_status
+
+- name: create report directory
+  file:
+    state: directory
+    dest: "/tmp/reportDir_{{ ansible_hostname }}_{{ ansible_date_time.date }}"
+  register: reportDir
+
+- name: Check DB version
+  command: "mysql -BNe 'select @@version;'"
+  register: mariadb_version
+  tags: check_db_version
+
+- name: set report directory fact
+  no_log: true
+  set_fact: 
+    report_dir: "{{ reportDir.path }}"
+  cacheable: yes
+
+- name: write MariaDB version to file
+  shell: |
+    echo "* Check MariaDB version" >> "{{ report_dir }}/dbVersion.{{ ansible_hostname }}"
+    echo "version for {{ ansible_hostname }} : {{ mariadb_version.stdout }} " >> {{ report_dir }}/dbVersion.{{ ansible_hostname }}
+  when: mariadb_version | length > 0
+

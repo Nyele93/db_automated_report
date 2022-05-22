@@ -1,0 +1,16 @@
+---
+- name: Check I/O capacity
+  command: "mysql -BNe 'select @@innodb_io_capacity;'"
+  register: io_capacity
+  tags: check_io_capacity
+
+- name: Check thread cache size
+  command: "mysql -BNe 'select @@thread_cache_size;'"
+  register: thread_cache_size
+  tags: check_thread_cache_size
+      
+- name: Check threads created counter
+  command: "mysql -BNe 'select variable_value from information_schema.global_status where variable_name = \"threads_created\";'"
+  register: threads_created
+  tags: check_threads_created_counter
+
