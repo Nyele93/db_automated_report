@@ -1,0 +1,4 @@
+---
+# vars file for performance_audit
+reportdir: /tmp
+

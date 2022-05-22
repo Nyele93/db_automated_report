@@ -1,0 +1,28 @@
+---
+- name: Binary logs metrics
+  hosts: dbservers
+  remote_user: root
+  become: true
+  become_user: root
+  gather_facts: true
+  tasks:
+    - name: Check InnoDB log file size
+      command: "mysql -BNe 'select CONVERT(@@innodb_log_file_size /1024/1024, INTEGER);'"
+      register: innodb_log_file_size
+      tags: check_innodb_log_file_size
+      
+     #put logic to skip in 10.6 
+    - name: Check log file number
+      command: "mysql -BNe 'select @@innodb_log_files_in_group;'"
+      register: log_file_number
+      tags: check_log_file_number
+      #when: version set fact.
+
+    - name: Check Innodb Flush method
+      command: "mysql -BNe 'select @@innodb_flush_method;'"
+      register: innodb_flush_method
+      tags: check_flush_method
+
+    - name: test output
+      debug: 
+        msg: "{{ innodb_log_file_size.stdout }}"

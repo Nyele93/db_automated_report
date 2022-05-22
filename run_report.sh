@@ -11,7 +11,7 @@ declare -r custom_dns_file="custom_dns_file"
 declare -r inv_group_name="dbservers"
 #echo "enter username";  read uname
 #read -p "which program?" prog 
-read -s -p "Enter Password: " password
+read -p "Enter Customer Name: " cust_name
 echo
 echo $intro_info
 echo "-----------------------------------------------------------"
@@ -23,7 +23,7 @@ while getopts u:p: option; do
                 ?) echo "unknown flag"
         esac
 done
-#echo "user: $mariadb_user / password: $mariadb_password"
+
 printTableformat(){
     local -r delimiter="${1}"
     local -r data="$(removeEmptyLines "${2}")"
@@ -106,13 +106,33 @@ touch server_details
 cat > server_details <<-EOF
 S/N,ALIAS,HOST,SSH_USER,SSH_PASSWORD
 EOF
-
-touch host_vars.yml
-cat > host_vars.yml <<-EOF
----
+#create custom host file deployment
+touch $custom_host_file
+cat > $custom_host_file <<-EOF
+[$inv_group_name]
 EOF
 
+#touch host_vars.yml
+#cat > host_vars.yml <<-EOF
+#---
+#EOF
+
+launch_ansible_script(){
+  ansible-playbook main.yml -i $custom_host_file
+}
+
 begin_report_dynamic(){
+
+ declare -r report_directory=/tmp/audit_rpt_${cust_name}
+#create report directory using $cust_name $(date +'%d/%m/%Y)
+if [ ! -d $report_directory ]  
+then 
+    mkdir -p $report_directory
+   chmod -R 777 $report_directory
+fi
+#replcae report dir on roles vars with creatd directory
+sed -i "s|/tmp|$report_directory|g" ./performance_audit/vars/main.yml
+
 read -p "Enter Number of Nodes:" no_instances
 if [[ $no_instances -gt 0 ]]; then 
    #echo $?
@@ -160,18 +180,25 @@ declare redacted_pwd=${ssh_password//[a-z0-9]/x}
 cat >> server_details <<-EOF
 $inst_no,$alias,$host,$ssh_user,$redacted_pwd
 EOF
+
+#write custom host deployment
+cat >> $custom_host_file <<-EOF
+$alias ansible_ssh_host=$host ansible_connection=ssh ansible_user=$ssh_user ansible_password=$ssh_password
+EOF
+
   done
 echo
-hff=`echo ${hosts_array[@]:0:$i} | sed -e "s/ /,/g"`
-cat >> host_vars.yml <<-EOF
-hosts: [$hff]
-EOF
+
+#hff=`echo ${hosts_array[@]:0:$i} | sed -e "s/ /,/g"`
+#cat >> host_vars.yml <<-EOF
+#hosts: [$hff]
+#EOF
 
    printTableformat ',' "$(cat server_details)"
    echo
    read -p "Proceed with running reports on the above servers[Y/N]: "  conf_pr
-   if [[ $conf_pr = "y" || $conf_pr = "yes" ]]; then
-        echo "Auto Deploying Script.";
+   if [[ $conf_pr = "y" || $conf_pr = "yes" ]]; then 
+      echo "starting Performance Audit report.."; launch_ansible_script
    elif [[ $conf_pr = "n" || $conf_pr = "no" ]]; then
    echo "Terminating Program... Bye..."
    fi
