@@ -9,4 +9,4 @@
 - include: querycache_metrics.yml
 - include: connections_metrics.yml
 - include: os_metrics.yml
-
+- include: prepare_output.yml

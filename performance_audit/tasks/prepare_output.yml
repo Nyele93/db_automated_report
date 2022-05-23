@@ -1,0 +1,12 @@
+---
+- name: prepare final output
+  shell: |
+    echo "--- Performance audit start ---"  >> {{ reportdir }}/audit_report.final
+    echo  >> {{ reportdir }}/audit_report.final
+    for f in {{ reportdir }}/*check; do (cat "${f}"; echo) >> {{ reportdir }}/audit_report.final; done
+    echo "--- Performance audit end ---"  >> {{ reportdir }}/audit_report.final
+    echo  >> {{ reportdir }}/audit_report.final
+  register: prepare_output
+  delegate_to: 127.0.0.1
+  run_once: true
+  
