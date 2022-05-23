@@ -9,28 +9,21 @@
   debug: 
     msg: "{{ db_service_check.stdout }}"
   when: db_service_check.stdout | length > 0
-  tags: report_status
-
-- name: create report directory
-  file:
-    state: directory
-    dest: "/tmp/reportDir_{{ ansible_hostname }}_{{ ansible_date_time.date }}"
-  register: reportDir
+  tags: db_service_status
 
 - name: Check DB version
   command: "mysql -BNe 'select @@version;'"
   register: mariadb_version
   tags: check_db_version
 
-- name: set report directory fact
-  no_log: true
-  set_fact: 
-    report_dir: "{{ reportDir.path }}"
-  cacheable: yes
-
 - name: write MariaDB version to file
   shell: |
-    echo "* Check MariaDB version" >> "{{ report_dir }}/dbVersion.{{ ansible_hostname }}"
-    echo "version for {{ ansible_hostname }} : {{ mariadb_version.stdout }} " >> {{ report_dir }}/dbVersion.{{ ansible_hostname }}
+    echo "* Check MariaDB version" >> {{ reportdir }}/dbVersion_{{ ansible_hostname }}
+    echo "version for {{ ansible_hostname }} : {{ mariadb_version.stdout }} " >> {{ reportdir }}/dbVersion_{{ ansible_hostname }}
+  register: file_written
+  delegate_to: 127.0.0.1
   when: mariadb_version | length > 0
 
+- name: echo report directory
+  debug: msg="report written to file - {{ reportdir }}/dbVersion_{{ ansible_hostname }}"
+  when: "file_written.rc == 0"

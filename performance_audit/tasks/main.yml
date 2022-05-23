@@ -1,12 +1,12 @@
 ---
-#include tasks for generating performance report.
+#tasks generating performance report.
 
 - include: check_dbVersion.yml
 - include: bufferpool_metrics.yml
-- include: log_metrics.yml
-- include: threads_metrics.yml
-- include: table_metrics.yml
-- include: querycache_metrics.yml
-- include: connections_metrics.yml
-- include: os_metrics.yml
+#- include: log_metrics.yml
+#- include: threads_metrics.yml
+#- include: table_metrics.yml
+#- include: querycache_metrics.yml
+#- include: connections_metrics.yml
+#- include: os_metrics.yml
 

@@ -4,3 +4,15 @@
   register: innodb_buffer_pool_size
   tags: check_innodb_buffer_pool_size
 
+- name: write report to file
+  shell: |
+    echo "* Check InnoDB buffer pool size" >> {{ reportdir }}/bufferpool_{{ ansible_hostname }}
+    echo "InnoDB buffer pool size for {{ ansible_hostname }} : {{ innodb_buffer_pool_size.stdout }} GB" >> {{ reportdir }}/bufferpool_{{ ansible_hostname }}
+  register: file_written
+  delegate_to: 127.0.0.1
+  when: innodb_buffer_pool_size | length > 0
+
+- name: echo report directory
+  debug: msg="report written to file - {{ reportdir }}/dbVersion_{{ ansible_hostname }}"
+  when: "file_written.rc == 0"
+
