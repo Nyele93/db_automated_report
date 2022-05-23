@@ -3,7 +3,7 @@
   hosts: dbservers
   gather_facts: true
   become: true
-  strategy: free
+  strategy: linear
   roles:
     - performance_audit
 

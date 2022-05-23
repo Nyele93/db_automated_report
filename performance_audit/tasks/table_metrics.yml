@@ -19,12 +19,77 @@
   register: open_table_definitions
   tags: check_open_table_definition
 
-    - name: check max tmp table size
-      command: "mysql -BNe 'select convert(@@tmp_table_size /1024 /1024, INTEGER);'"
-      register: max_tmp_table_size
-      tags: check_max_tmp_table_size
+- name: check max tmp table size
+  command: "mysql -BNe 'select convert(@@tmp_table_size /1024 /1024, INTEGER);'"
+  register: max_tmp_table_size
+  tags: check_max_tmp_table_size
     
-    - name: check max memory table size
-      command: "mysql -BNe 'select convert(@@max_heap_table_size /1024 /1024, INTEGER)';"
-      register: max_memory_table_size
-      tags: check_max_memory_table_size
+- name: check max memory table size
+  command: "mysql -BNe 'select convert(@@max_heap_table_size /1024 /1024, INTEGER)';"
+  register: max_memory_table_size
+  tags: check_max_memory_table_size
+
+- name: create report file and write header
+  shell: echo "* Check table open cache size" >> {{ reportdir }}/table_metrics_check
+  register: file_written
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Table open cache size for {{ ansible_hostname }} - {{ table_open_cache.stdout }} tables" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+
+- name: create report file and write header
+  shell: echo "* Check tables opened counter" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "tables opened for {{ ansible_hostname }} - {{ tables_opened.stdout }} tables" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check Table definitions cache size" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Table definition cache size for {{ ansible_hostname }} - {{ table_defn_cache.stdout }} definitions" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check table definitions opened counter" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "table definitions opened for {{ ansible_hostname }} - {{ open_table_definitions.stdout }} definitions" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check max tmp table size" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Max tmp table size for for {{ ansible_hostname }} - {{ max_tmp_table_size.stdout }} MB" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check max memory table size" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Max memory table size for {{ ansible_hostname }} - {{ max_memory_table_size.stdout }} iops" >> {{ reportdir }}/table_metrics_check
+  delegate_to: 127.0.0.1
+
+- name: echo report directory
+  debug: msg="report written to file - {{ reportdir }}/table_metrics_check"
+  when: "file_written.rc == 0"

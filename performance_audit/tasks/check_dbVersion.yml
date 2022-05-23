@@ -2,7 +2,6 @@
 - name: Check_Existing_DB_Service
   script: ./check_existing_db_service.sh
   register: db_service_check
-  no_log: True
   tags: check_db_service
 
 - name: Display_DB_Service_Status
@@ -16,14 +15,19 @@
   register: mariadb_version
   tags: check_db_version
 
+- name: create report file and write header
+  shell: echo "* Check MariaDB version" >> {{ reportdir }}/dbVersion_check
+  register: file_written
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
 - name: write MariaDB version to file
-  shell: |
-    echo "* Check MariaDB version" >> {{ reportdir }}/dbVersion_{{ ansible_hostname }}
-    echo "version for {{ ansible_hostname }} : {{ mariadb_version.stdout }} " >> {{ reportdir }}/dbVersion_{{ ansible_hostname }}
+  shell: echo "version for {{ ansible_hostname }} - {{ mariadb_version.stdout }} " >> {{ reportdir }}/dbVersion_check
   register: file_written
   delegate_to: 127.0.0.1
   when: mariadb_version | length > 0
 
 - name: echo report directory
-  debug: msg="report written to file - {{ reportdir }}/dbVersion_{{ ansible_hostname }}"
+  debug: msg="report written to file - {{ reportdir }}/dbVersion_check"
   when: "file_written.rc == 0"

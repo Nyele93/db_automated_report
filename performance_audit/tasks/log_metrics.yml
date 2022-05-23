@@ -3,16 +3,65 @@
   command: "mysql -BNe 'select CONVERT(@@innodb_log_file_size /1024/1024, INTEGER);'"
   register: innodb_log_file_size
   tags: check_innodb_log_file_size
+
+- name: Check version (for parameter existence)
+  command: "mysql -BNe 'select @@version;'"
+  register: version_check
+- name: set version check fact
+  set_fact:
+    ver_check: "{{ version_check.stdout }}"
+    cacheable: yes
       
-     #put logic to skip in 10.6 
-#- name: Check log file number
-#  command: "mysql -BNe 'select @@innodb_log_files_in_group;'"
-#  register: log_file_number
-#  tags: check_log_file_number
-  #when: version set fact.
+- name: Check log file number
+  command: "mysql -BNe 'select @@innodb_log_files_in_group;'"
+  register: log_file_number
+  tags: check_log_file_number
+  when: ver_check is not match("10.6.*")
 
 - name: Check Innodb Flush method
   command: "mysql -BNe 'select @@innodb_flush_method;'"
   register: innodb_flush_method
   tags: check_flush_method
 
+- name: create report file and write header
+  shell: echo "* Check InnoDB log file size" >> {{ reportdir }}/logfile_check
+  register: file_written
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "InnoDB log file size for {{ ansible_hostname }} - {{ innodb_log_file_size.stdout }} MB" >> {{ reportdir }}/logfile_check
+  delegate_to: 127.0.0.1
+  when: ver_check | length > 0
+
+- name: create report file and write header
+  shell: echo "* Check InnoDB log file number" >> {{ reportdir }}/logfile_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+  
+- name: write report to file
+  shell: echo "InnoDB log file number for {{ ansible_hostname }} - {{ log_file_number.stdout }} files" >> {{ reportdir }}/logfile_check
+  delegate_to: 127.0.0.1
+  when: ver_check is not match("10.6.*")
+
+- name: write report to file
+  shell: echo "InnoDB log file number for {{ ansible_hostname }} - parameter no longer exists in version {{ ver_check }}" >> {{ reportdir }}/logfile_check
+  delegate_to: 127.0.0.1
+  when: ver_check is match("10.6.*")
+  
+- name: create report file and write header
+  shell: echo "* Check InnoDB flush method" >> {{ reportdir }}/logfile_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+  
+- name: write report to file
+  shell: echo "InnoDB flush method for {{ ansible_hostname }} - {{ innodb_flush_method.stdout }} " >> {{ reportdir }}/logfile_check
+  delegate_to: 127.0.0.1
+  when: ver_check | length > 0
+  
+- name: echo report directory
+  debug: msg="report written to file - {{ reportdir }}/logfile_check"
+  when: "file_written.rc == 0"

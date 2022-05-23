@@ -9,4 +9,54 @@
   register: query_cache_size
   tags: check_query_cache_size
 
+- name: check query cache size
+  command: "mysql -BNe 'select Variable_value from information_schema.global_status where Variable_name = \"Qcache_hits\";'"
+  register: qcache_hits
 
+- name: check query cache size
+  command: "mysql -BNe 'select Variable_value from information_schema.global_status where variable_name = \"Qcache_inserts\";'"
+  register: qcache_inserts
+
+- name: check efficiency
+  shell: echo "$(echo "scale=2; qcache_hit/(qcache_hits+qcache_inserts)" | bc)%"  
+  register: qcache_hit_efficiency
+ 
+- name: set Qcache facts
+  set_fact: 
+    hits: qcache_hits
+    inserts: qcache_inserts
+    efficiency: qcache_hit_efficiency
+    cacheable: yes
+  when: qcache_hit_efficiency.stderr | length == 0
+
+- name: create report file and write header
+  shell: echo "* Check query cache is enabled" >> {{ reportdir }}/query_cache_check
+  register: file_written
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Query cache is enabled for {{ ansible_hostname }} - {{ query_cache_enabled.stdout }}" >> {{ reportdir }}/query_cache_check
+  delegate_to: 127.0.0.1
+
+- name: create report file and write header
+  shell: echo "* Check query cache size" >> {{ reportdir }}/query_cache_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Query cache size for {{ ansible_hostname }} - {{ query_cache_size.stdout }} MB" >> {{ reportdir }}/query_cache_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check query cache efficiency" >> {{ reportdir }}/query_cache_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Query cache efficiency for for {{ ansible_hostname }} - Hits- qcache_hits, Inserts- qcache_inserts, Hit rate- qcache_hit_efficiency" >> {{ reportdir }}/query_cache_check
+  delegate_to: 127.0.0.1
+  when: qcache_hit_efficiency.stderr | length == 0

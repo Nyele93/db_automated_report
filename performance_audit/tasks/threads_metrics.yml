@@ -14,3 +14,38 @@
   register: threads_created
   tags: check_threads_created_counter
 
+- name: create report file and write header
+  shell: echo "* Check InnoDB I/O capacity" >> {{ reportdir }}/threads_io_check
+  register: file_written
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "InnoDB I/O capacity for {{ ansible_hostname }} - {{ io_capacity.stdout }} iops" >> {{ reportdir }}/threads_io_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check thread_cache size" >> {{ reportdir }}/threads_io_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Thread cache size for {{ ansible_hostname }} - {{ thread_cache_size.stdout }} " >> {{ reportdir }}/threads_io_check
+  delegate_to: 127.0.0.1
+
+- name: create report file and write header
+  shell: echo "* Check thread_created counter" >> {{ reportdir }}/threads_io_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "Threads created for {{ ansible_hostname }} - {{ threads_created.stdout }} threads" >> {{ reportdir }}/threads_io_check
+  delegate_to: 127.0.0.1
+
+- name: echo report directory
+  debug: msg="report written to file - {{ reportdir }}/threads_io_check"
+  when: "file_written.rc == 0"
+
