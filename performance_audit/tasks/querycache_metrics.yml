@@ -57,6 +57,6 @@
   when: inventory_hostname == ansible_play_hosts_all[0]
 
 - name: write report to file
-  shell: echo "Query cache efficiency for for {{ ansible_hostname }} - Hits- qcache_hits, Inserts- qcache_inserts, Hit rate- qcache_hit_efficiency" >> {{ reportdir }}/query_cache_check
+  shell: echo "Query cache efficiency for {{ ansible_hostname }} - Hits- qcache_hits, Inserts- qcache_inserts, Hit rate- qcache_hit_efficiency" >> {{ reportdir }}/query_cache_check
   delegate_to: 127.0.0.1
   when: qcache_hit_efficiency.stderr | length == 0

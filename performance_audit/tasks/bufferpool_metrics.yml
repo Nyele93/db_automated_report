@@ -1,6 +1,6 @@
 ---
 - name: check innodb_buffer_pool size
-  command: "mysql -BNe 'select CONVERT(@@innodb_buffer_pool_size /1024/1024/1024, INTEGER);'"
+  command: "mysql -BNe 'select CONVERT(@@innodb_buffer_pool_size /1024/1024, INTEGER);'"
   register: innodb_buffer_pool_size
   tags: check_innodb_buffer_pool_size
 
@@ -12,7 +12,7 @@
   when: inventory_hostname == ansible_play_hosts_all[0]
 
 - name: write report to file
-  shell: echo "InnoDB buffer pool size for {{ ansible_hostname }} - {{ innodb_buffer_pool_size.stdout }} GB" >> {{ reportdir }}/bufferpool_check
+  shell: echo "InnoDB buffer pool size for {{ ansible_hostname }} - {{ innodb_buffer_pool_size.stdout }} MB" >> {{ reportdir }}/bufferpool_check
   register: file_written
   delegate_to: 127.0.0.1
   when: innodb_buffer_pool_size

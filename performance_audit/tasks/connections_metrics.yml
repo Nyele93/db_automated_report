@@ -14,4 +14,33 @@
   register: innodb_metadata_flag
   tags: check_innodb_metadata_flag
 
+- name: create report file and write header
+  shell: echo "* Check max connections" >> {{ reportdir }}/connections_check
+  register: file_written
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
 
+- name: write report to file
+  shell: echo "Max connections for {{ ansible_hostname }} - {{ max_connections.stdout }} conns" >> {{ reportdir }}/connections_check
+  delegate_to: 127.0.0.1
+
+- name: create report file and write header
+  shell: echo "* Check max connections used counter" >> {{ reportdir }}/connections_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "max used connections for {{ ansible_hostname }} - {{ max_used_connections.stdout }} conns" >> {{ reportdir }}/connections_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check InnoDB stats on metadata flag" >> {{ reportdir }}/connections_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "innodb_metadata_flag for {{ ansible_hostname }} - {{ innodb_metadata_flag.stdout }}" >> {{ reportdir }}/connections_check
+  delegate_to: 127.0.0.1

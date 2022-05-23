@@ -1,34 +1,69 @@
 ---
 - name: Check available and installed memory
-  shell: 
-    echo scale=0; cat /proc/meminfo  | egrep 'MemTotal|MemAvailable' | sort | tr -s ' '
+  shell: |
+    echo 
+    echo "$(cat /proc/meminfo | egrep 'MemTotal|MemAvailable' | numfmt --field 2 --from-unit=Ki --to-unit=Gi | sed 's/ kB/G/g' | sort | tr -s ' ' | cut -d '' -f 2)"
   register: available_installed_mem
   tags: check_available_installed_mem
 
 - name: check IO scheduler settings
-  shell: for s in  /sys/block/*/queue/scheduler; do disk=$(echo $s | cut -d "/" -f 4); echo -n "   $disk- "; cat $s; done
-  register: io_scheduler_config
+  shell: |
+    echo 
+    for s in  /sys/block/*/queue/scheduler; do disk=$(echo $s | cut -d "/" -f 4); echo -n "   $disk- "; cat $s; done
+  register: io_scheduler_settings
   tags: check_io_scheduler_settings
 
 - name: check linux swappiness setting
-  shell: /sbin/sysctl vm.swappiness
-  register: linuxx_swappiness
+  shell: | 
+    echo
+    /sbin/sysctl vm.swappiness
+  register: linux_swappiness
   tags: check_linux_swappiness_settings
 
 - name: check linux mount options
-  shell: mount | grep '^/'
+  shell: | 
+    echo
+    mount | grep '^/'
   register: mount_options
   tags: check_linux_mount_options
 
 - name: create report file and write header
-  shell: echo "* Check InnoDB log file size" >> {{ reportdir }}/logfile_check
+  shell: echo "* Check Linux I/O scheduler" >> {{ reportdir }}/OS_metrics_check
   register: file_written
   delegate_to: 127.0.0.1
   run_once: true
   when: inventory_hostname == ansible_play_hosts_all[0]
 
 - name: write report to file
-  shell: echo "InnoDB log file size for {{ ansible_hostname }} - {{ innodb_log_file_size.stdout }} MB" >> {{ reportdir }}/logfile_check
+  shell: echo "scheduler setting for {{ ansible_hostname }} - {{ io_scheduler_settings.stdout }} " >> {{ reportdir }}/OS_metrics_check
   delegate_to: 127.0.0.1
-  when: ver_check | length > 0
 
+- name: create report file and write header
+  shell: echo "* Check Linux swappiness setting" >> {{ reportdir }}/OS_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "swappiness setting for {{ ansible_hostname }} - {{ linux_swappiness.stdout }}" >> {{ reportdir }}/OS_metrics_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check Linux mount options" >> {{ reportdir }}/OS_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "mount options for {{ ansible_hostname }} - {{ mount_options.stdout }}" >> {{ reportdir }}/OS_metrics_check
+  delegate_to: 127.0.0.1
+  
+- name: create report file and write header
+  shell: echo "* Check available and installed memory" >> {{ reportdir }}/OS_metrics_check
+  delegate_to: 127.0.0.1
+  run_once: true
+  when: inventory_hostname == ansible_play_hosts_all[0]
+
+- name: write report to file
+  shell: echo "available memory for {{ ansible_hostname }} - {{ available_installed_mem.stdout }}" >> {{ reportdir }}/OS_metrics_check
+  delegate_to: 127.0.0.1
