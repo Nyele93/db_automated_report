@@ -115,8 +115,12 @@ EOF
 #---
 #EOF
 
-launch_ansible_script(){
-  ansible-playbook main.yml -i $custom_host_file
+launch_ansible_dynamic(){
+  ansible-playbook audit.yml -i $custom_host_file
+}
+
+launch_anisble_local(){
+  ansible-playbook audit.yml
 }
 
 begin_report_dynamic(){
@@ -130,6 +134,9 @@ then
 fi
 #replace report_dir on roles `vars` with created directory
 sed -i "s|/tmp|$report_directory|g" ./performance_audit/vars/main.yml
+#sed -i "s|usr|$mariadb_user|g" ./performance_audit/vars/main.yml
+#sed -i "s|pwd|$mariadb_password|g" ./performance_audit/vars/main.yml
+
 
 read -p "Enter Number of Nodes:" no_instances
 if [[ $no_instances -gt 0 ]]; then 
@@ -196,7 +203,7 @@ echo
    echo
    read -p "Proceed with running reports on the above servers[Y/N]: "  conf_pr
    if [[ $conf_pr = "y" || $conf_pr = "yes" ]]; then 
-      echo "starting Performance Audit report.."; launch_ansible_script
+      echo "starting Performance Audit report.."; launch_ansible_dynamic
    elif [[ $conf_pr = "n" || $conf_pr = "no" ]]; then
    echo "Terminating Program... Bye..."
    fi
@@ -212,11 +219,11 @@ begin_report_hostFile(){
 
 echo "Choose Option to build target inventory"
 
-select task in  "dynamic" "use_inventory" "quit"
+select task in  "dynamic" "local_inventory" "quit"
 do
   	case $task in 
                 dynamic) echo "Selected Option: dynamic"; begin_report_dynamic;;
-                use_inventory) echo "Selected Option: read from inventory file"; begin_report_hostFile;;
+                local_inventory) echo "Selected Option: read from inventory file"; launch_anisble_local;;
                 quit) break;;
                 *) echo "Invalid option";;
         esac

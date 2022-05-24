@@ -1,4 +1,6 @@
 ---
 # vars file for performance_audit
-reportdir: /tmp
+reportdir: /tmp/audit_rpt_Emirates
+mariadb_user: usr
+mariadb_pwd: pwd
 
