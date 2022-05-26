@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 #ToDO: fill on meta data info
 declare -r intro_info="Starting automated Performance Audit(v1.0) $(date +'%d/%m/%Y %H:%M:%S')"
 declare -a details_arr
@@ -9,7 +9,22 @@ declare hosts_array=()
 declare -r custom_host_file="custom_deployment_hosts"
 declare -r custom_dns_file="custom_dns_file"
 declare -r inv_group_name="dbservers"
-read -p "Enter Customer Name: " cust_name
+
+#read config file for: customer_name, mariadb_user, mariadb_password
+. deploy.conf
+
+default_customer=$customer_name
+read -ep "Enter Customer Name [$default_customer]: " cust_name
+cust_name=${name-$default_customer}
+
+#set credentials in vars of role if first run
+#ToDO: implement cache
+ if [[ ! -z $mariadb_user && ! -z $mariadb_password ]]  
+  then 
+     sed -i "s/mariadb_usr/$mariadb_user/g" ./performance_audit/vars/main.yml
+     sed -i "s/mariadb_pwd/$mariadb_password/g" ./performance_audit/vars/main.yml
+ fi
+
 echo
 echo $intro_info
 echo "-----------------------------------------------------------"
@@ -117,10 +132,17 @@ EOF
 
 launch_ansible_dynamic(){
   ansible-playbook audit.yml -i $custom_host_file
+  #reset values in roles var file
+   sed -i "s/$mariadb_user/mariadb_usr/g" ./performance_audit/vars/main.yml
+   sed -i "s/$mariadb_password/mariadb_pwd/g" ./performance_audit/vars/main.yml
 }
 
 launch_anisble_local(){
   ansible-playbook audit.yml
+   #reset values in roles var file
+   sed -i "s/$mariadb_user/mariadb_usr/g" ./performance_audit/vars/main.yml
+   sed -i "s/$mariadb_password/mariadb_pwd/g" ./performance_audit/vars/main.yml
+
 }
 
 begin_report_dynamic(){
@@ -134,9 +156,6 @@ then
 fi
 #replace report_dir on roles `vars` with created directory
 sed -i "s|/tmp|$report_directory|g" ./performance_audit/vars/main.yml
-#sed -i "s|usr|$mariadb_user|g" ./performance_audit/vars/main.yml
-#sed -i "s|pwd|$mariadb_password|g" ./performance_audit/vars/main.yml
-
 
 read -p "Enter Number of Nodes:" no_instances
 if [[ $no_instances -gt 0 ]]; then 
@@ -201,12 +220,15 @@ echo
 
    printTableformat ',' "$(cat server_details)"
    echo
-   read -p "Proceed with running reports on the above servers[Y/N]: "  conf_pr
-   if [[ $conf_pr = "y" || $conf_pr = "yes" ]]; then 
+   while [[ -z $conf_pr ]]
+   do
+    read -p "Proceed with running reports on the above servers[Y/N]: "  conf_pr
+    if [[ $conf_pr = "y" || $conf_pr = "yes" ]]; then 
       echo "starting Performance Audit report.."; launch_ansible_dynamic
-   elif [[ $conf_pr = "n" || $conf_pr = "no" ]]; then
-   echo "Terminating Program... Bye..."
-   fi
+    elif [[ $conf_pr = "n" || $conf_pr = "no" ]]; then
+    echo "Terminating Program... Bye..."
+    fi
+   done
 
 else
   echo "[Error] : Please enter a number greater than 0"
@@ -225,7 +247,7 @@ do
                 dynamic) echo "Selected Option: dynamic"; begin_report_dynamic;;
                 local_inventory) echo "Selected Option: read from inventory file"; launch_anisble_local;;
                 quit) break;;
-                *) echo "Invalid option";;
+                *) echo "Invalid option. goodbye!!!";;
         esac
 	break
 done
